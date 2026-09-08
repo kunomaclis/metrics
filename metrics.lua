@@ -74,14 +74,53 @@ require('commands')
 require('horizon')
 require('initialization')
 
+local renderDisabled = false
+local activePacket
+local activePacketHandler
+
+local packetHandlers =
+{
+    [ H.Packet.ZONE_START      ] = function()
+        if not Ashita.Player.IsZoning() then
+            Ashita.Player.Zoning(true)
+            Ashita.Packets.ResetDuplicateBuffers()
+        end
+    end,
+    [ H.Packet.ZONE_END        ] = function()
+        if Ashita.Player.IsZoning() then
+            H.ZoningEnd()
+            Ashita.Packets.ResetDuplicateBuffers()
+        end
+    end,
+    [ H.Packet.EXAMPLAR_UPDATE ] = function(packet) XP.OnExemplarUpdate(packet.data) end,
+    [ H.Packet.CAPACITY_UPDATE ] = function(packet) XP.OnCapacityUpdate(packet.data) end,
+    [ H.Packet.ALLIANCE_UPDATE ] = function() Ashita.Party.NeedRefresh = true end,
+    [ H.Packet.PARTY_UPDATE    ] = function() Ashita.Party.NeedRefresh = true end,
+    [ H.Packet.XP_UPDATE       ] = function(packet) XP.OnXpGained(packet.data) end,
+    [ H.Packet.PLAYER_UPDATE   ] = function() H.PlayerUpdate() end,
+    [ H.Packet.ACTION          ] = function(packet) H.StartActionPacket(packet) end,
+    [ H.Packet.ACTION_MESSAGE  ] = function(packet) H.ActionMessage(packet) end,
+    [ H.Packet.ITEM_DROPPED    ] = function(packet) Loot.Dropped(packet.data) end,
+    [ H.Packet.ITEM_OBTAINED   ] = function(packet) Loot.Obtained(packet.data) end,
+}
+
+local invokePacketHandler = function()
+    activePacketHandler(activePacket)
+end
+
+local packetError = function(error)
+    local packetId = activePacket and activePacket.id or "unknown"
+    return Debug.Error.Traceback(string.format("packet_in 0x%03X", tonumber(packetId) or 0), error)
+end
+
 ------------------------------------------------------------------------------------------------------
 -- Subscribe to screen rendering. Use this to drive things over time.
 -- https://github.com/ocornut/imgui
 -- https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
 -- https://github.com/ocornut/imgui/blob/master/imgui_tables.cpp
 ------------------------------------------------------------------------------------------------------
-ashita.events.register('d3d_present', 'present_cb', function()
-    if not _Globals.Initialized or not Ashita.Player.IsLoggedIn() then
+local present = function()
+    if not _Globals.Initialized or Ashita.Player.IsZoning() or not Ashita.Player.IsLoggedIn() then
         return nil
     end
 
@@ -122,6 +161,21 @@ ashita.events.register('d3d_present', 'present_cb', function()
     end
 
     Perf.Capture(Perf.Enums.UI_RENDER, perfStart)
+end
+
+local presentError = function(error)
+    return Debug.Error.Traceback("d3d_present", error)
+end
+
+ashita.events.register('d3d_present', 'present_cb', function()
+    if renderDisabled then
+        return nil
+    end
+
+    local success = xpcall(present, presentError)
+    if not success then
+        renderDisabled = true
+    end
 end)
 
 ------------------------------------------------------------------------------------------------------
@@ -141,23 +195,12 @@ ashita.events.register('packet_in', 'packet_in_cb', function(packet)
         return nil
     end
 
-    local handlers =
-    {
-        [ H.Packet.ZONE_START      ] = function() Ashita.Player.Zoning(true) end,
-        [ H.Packet.ZONE_END        ] = function() H.ZoningEnd() end,
-        [ H.Packet.EXAMPLAR_UPDATE ] = function() XP.OnExemplarUpdate(packet.data) end,
-        [ H.Packet.CAPACITY_UPDATE ] = function() XP.OnCapacityUpdate(packet.data) end,
-        [ H.Packet.ALLIANCE_UPDATE ] = function() Ashita.Party.NeedRefresh = true end,
-        [ H.Packet.PARTY_UPDATE    ] = function() Ashita.Party.NeedRefresh = true end,
-        [ H.Packet.XP_UPDATE       ] = function() XP.OnXpGained(packet.data) end,
-        [ H.Packet.PLAYER_UPDATE   ] = function() H.PlayerUpdate() end,
-        [ H.Packet.ACTION          ] = function() H.StartActionPacket(packet) end,
-        [ H.Packet.ACTION_MESSAGE  ] = function() H.ActionMessage(packet) end,
-        [ H.Packet.ITEM_DROPPED    ] = function() Loot.Dropped(packet.data) end,
-        [ H.Packet.ITEM_OBTAINED   ] = function() Loot.Obtained(packet.data) end,
-    }
-
-    if handlers[packet.id] then
-        pcall(handlers[packet.id])
+    local handler = packetHandlers[packet.id]
+    if handler then
+        activePacket = packet
+        activePacketHandler = handler
+        xpcall(invokePacketHandler, packetError)
+        activePacket = nil
+        activePacketHandler = nil
     end
 end)

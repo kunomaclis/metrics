@@ -29,6 +29,25 @@ Debug.Error.Add = function(type, tag, error)
     return false
 end
 
+Debug.Error.Traceback = function(tag, error)
+    local trace = debug.traceback(tostring(error), 2)
+    Debug.Error.Add(Debug.Error.ERROR, tag, trace)
+
+    pcall(function()
+        local path = File.Path()
+        File.FileExists(path)
+
+        local file = io.open(path .. "metrics-errors.log", "a")
+        if file then
+            file:write(string.format("[%s] %s\n%s\n\n", os.date("%Y-%m-%d %H:%M:%S"), tag, trace))
+            file:flush()
+            file:close()
+        end
+    end)
+
+    return trace
+end
+
 ------------------------------------------------------------------------------------------------------
 -- Resets the error log.
 ------------------------------------------------------------------------------------------------------
