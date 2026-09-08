@@ -156,7 +156,8 @@ H.Spell.IsActionBlocked = function(action, actorMob, ownerMob)
     for _, target in pairs(action.targets) do
         for _, actionData in pairs(target.actions) do
             local messageId = actionData.message
-            local audits    = H.Spell.Audits(actorMob, Ashita.Mob.GetMobByID(target.id), ownerMob)
+            local targetMob = Ashita.Mob.GetMobByID(target.id) or { name = DB.Enum.DEBUG }
+            local audits    = H.Spell.Audits(actorMob, targetMob, ownerMob)
 
             if messageId == Ashita.Message.IS_PARALYZED or messageId == Ashita.Message.IS_PARALYZED_2 then
                 DB.Data.Update(DB.UpdateMode.INC, 1, audits, DB.Trackable.ALL_PARALYZE, DB.Metric.HITS_ON_USE)

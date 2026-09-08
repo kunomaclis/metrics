@@ -87,10 +87,8 @@ local packetHandlers =
         end
     end,
     [ H.Packet.ZONE_END        ] = function()
-        if Ashita.Player.IsZoning() then
-            H.ZoningEnd()
-            Ashita.Packets.ResetDuplicateBuffers()
-        end
+        H.ZoningEnd()
+        Ashita.Packets.ResetDuplicateBuffers()
     end,
     [ H.Packet.EXAMPLAR_UPDATE ] = function(packet) XP.OnExemplarUpdate(packet.data) end,
     [ H.Packet.CAPACITY_UPDATE ] = function(packet) XP.OnCapacityUpdate(packet.data) end,

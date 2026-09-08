@@ -31,7 +31,11 @@ end
 
 Debug.Error.Traceback = function(tag, error)
     local trace = debug.traceback(tostring(error), 2)
-    Debug.Error.Add(Debug.Error.ERROR, tag, trace)
+    local isNew = Debug.Error.Add(Debug.Error.ERROR, tag, trace)
+
+    if not isNew then
+        return trace
+    end
 
     pcall(function()
         local path = File.Path()
