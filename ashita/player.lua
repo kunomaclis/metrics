@@ -101,14 +101,27 @@ end
 -- https://github.com/tirem/HXUI
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Player.IsLoggedIn = function()
-    local playerIndex = AshitaCore:GetMemoryManager():GetParty():GetMemberTargetIndex(0)
-
-    if playerIndex == 0 then
+    local memoryManager = AshitaCore:GetMemoryManager()
+    local party = memoryManager and memoryManager:GetParty()
+    if not party then
         return false
     end
 
-    local entity = AshitaCore:GetMemoryManager():GetEntity()
+    local playerIndex = party:GetMemberTargetIndex(0)
+    if not Ashita.Mob.IsValidIndex(playerIndex) then
+        return false
+    end
+
+    local entity = memoryManager:GetEntity()
+    if not entity then
+        return false
+    end
+
     local flags  = entity:GetRenderFlags0(playerIndex)
+    if not flags then
+        return false
+    end
+
     return bit.band(flags, 0x200) == 0x200 and bit.band(flags, 0x4000) == 0
 end
 
@@ -286,8 +299,13 @@ end
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Player.TargetIndex = function()
     local memoryManager = AshitaCore:GetMemoryManager()
-    local targetManager = memoryManager:GetTarget()
-    return targetManager:GetTargetIndex(targetManager:GetIsSubTargetActive())
+    local targetManager = memoryManager and memoryManager:GetTarget()
+    if not targetManager then
+        return nil
+    end
+
+    local index = targetManager:GetTargetIndex(targetManager:GetIsSubTargetActive())
+    return Ashita.Mob.IsValidIndex(index) and index or nil
 end
 
 -- ------------------------------------------------------------------------------------------------------

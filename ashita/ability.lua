@@ -24,7 +24,8 @@ Ashita.Ability = { }
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Ability.GetByID = function(id)
     if not id then
-        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Abiliity.GetByID", string.format("Parameter \"id\" was nil."))
+        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Ability.GetByID", "Parameter \"id\" was nil.")
+        return nil
     end
 
     local abilityData = AshitaCore:GetResourceManager():GetAbilityById(id)
@@ -69,7 +70,8 @@ end
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Ability.RecastID = function(id)
     if not id then
-        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Ability.RecastID", string.format("Parameter \"id\" was nil."))
+        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Ability.RecastID", "Parameter \"id\" was nil.")
+        return 0
     end
 
     local memoryManager = AshitaCore:GetMemoryManager()
