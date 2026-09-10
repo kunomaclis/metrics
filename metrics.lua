@@ -122,16 +122,16 @@ end
 -- https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
 -- https://github.com/ocornut/imgui/blob/master/imgui_tables.cpp
 ------------------------------------------------------------------------------------------------------
-local present = function()
+local updateReadiness = function()
     if not _Globals.Initialized or Ashita.Player.IsZoning() then
-        return nil
+        return false
     end
 
     local now = Socket.gettime()
     if not Ashita.Player.IsLoggedIn() then
         wasLoggedIn = false
         entityPacketsReady = false
-        return nil
+        return false
     end
 
     if not wasLoggedIn then
@@ -140,12 +140,14 @@ local present = function()
     end
 
     if now < renderReadyAt then
-        return nil
+        return false
     end
 
     entityPacketsReady = true
-    local perfStart = now
+    return true, now
+end
 
+local present = function(perfStart)
     -- Throttling for performance.
     Throttle.Throttle()
 
@@ -187,12 +189,17 @@ local presentError = function(error)
     return Debug.Error.Traceback("d3d_present", error)
 end
 
-ashita.events.register('d3d_present', 'present_cb', function()
-    if renderDisabled then
+local presentFrame = function()
+    local ready, perfStart = updateReadiness()
+    if renderDisabled or not ready then
         return nil
     end
 
-    local success = xpcall(present, presentError)
+    present(perfStart)
+end
+
+ashita.events.register('d3d_present', 'present_cb', function()
+    local success = xpcall(presentFrame, presentError)
     if not success then
         renderDisabled = true
     end
