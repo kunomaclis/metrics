@@ -13,7 +13,8 @@ Ashita.Party.RefreshTime      = os.time()
 ---@return table
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Party.Get = function()
-    local data = AshitaCore:GetMemoryManager():GetParty()
+    local memoryManager = AshitaCore:GetMemoryManager()
+    local data = memoryManager and memoryManager:GetParty()
     if not data then
         return { }
     end
@@ -106,7 +107,8 @@ Ashita.Party.Refresh = function(playerName, node)
         return nil
     end
 
-    local data = AshitaCore:GetMemoryManager():GetParty()
+    local memoryManager = AshitaCore:GetMemoryManager()
+    local data = memoryManager and memoryManager:GetParty()
     if not data then
         return nil
     end

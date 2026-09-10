@@ -13,7 +13,8 @@ Ashita.Spell.GetByID = function(id)
         return nil
     end
 
-    return AshitaCore:GetResourceManager():GetSpellById(id)
+    local resourceManager = AshitaCore:GetResourceManager()
+    return resourceManager and resourceManager:GetSpellById(id) or nil
 end
 
 -- ------------------------------------------------------------------------------------------------------

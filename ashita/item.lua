@@ -12,7 +12,8 @@ Ashita.Item.GetItemName = function(itemId)
         return 'Error'
     end
 
-    local item = AshitaCore:GetResourceManager():GetItemById(itemId)
+    local resourceManager = AshitaCore:GetResourceManager()
+    local item = resourceManager and resourceManager:GetItemById(itemId)
 
     if not item or not item.Name or not item.Name[1] then
         return "Error"
@@ -28,7 +29,8 @@ end
 ---@return number
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Item.GetItemLevel = function(itemName)
-    local item = AshitaCore:GetResourceManager():GetItemByName(itemName, 0)
+    local resourceManager = AshitaCore:GetResourceManager()
+    local item = resourceManager and resourceManager:GetItemByName(itemName, 0)
     if not item or not item.Level then
         return 0
     end

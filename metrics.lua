@@ -41,15 +41,6 @@ Timers       = require('timers')
 -- The 'T' table modifier is needed for the settings to save correctly without crashing on initial load.
 Metrics = T{ }
 
--- Duplicate packet checking from Thorny by way of the parse addon.
--- https://github.com/WinterSolstice8/parse/
-FFI = require('ffi')
-FFI.cdef[[
-    int32_t memcmp(const void* buff1, const void* buff2, size_t count);
-]]
-LastChunkBuffer    = T{ }
-CurrentChunkBuffer = T{ }
-
 require('version')
 require('resources._resource')
 require('database._database')
@@ -74,7 +65,11 @@ require('commands')
 require('horizon')
 require('initialization')
 
+local RENDER_GRACE_SECONDS = 3
 local renderDisabled = false
+local renderReadyAt = 0
+local wasLoggedIn = false
+local entityPacketsReady = false
 local activePacket
 local activePacketHandler
 
@@ -83,12 +78,13 @@ local packetHandlers =
     [ H.Packet.ZONE_START      ] = function()
         if not Ashita.Player.IsZoning() then
             Ashita.Player.Zoning(true)
-            Ashita.Packets.ResetDuplicateBuffers()
+            entityPacketsReady = false
         end
     end,
     [ H.Packet.ZONE_END        ] = function()
         H.ZoningEnd()
-        Ashita.Packets.ResetDuplicateBuffers()
+        entityPacketsReady = false
+        renderReadyAt = Socket.gettime() + RENDER_GRACE_SECONDS
     end,
     [ H.Packet.EXAMPLAR_UPDATE ] = function(packet) XP.OnExemplarUpdate(packet.data) end,
     [ H.Packet.CAPACITY_UPDATE ] = function(packet) XP.OnCapacityUpdate(packet.data) end,
@@ -100,6 +96,15 @@ local packetHandlers =
     [ H.Packet.ACTION_MESSAGE  ] = function(packet) H.ActionMessage(packet) end,
     [ H.Packet.ITEM_DROPPED    ] = function(packet) Loot.Dropped(packet.data) end,
     [ H.Packet.ITEM_OBTAINED   ] = function(packet) Loot.Obtained(packet.data) end,
+}
+
+local entityDependentPackets =
+{
+    [ H.Packet.PLAYER_UPDATE  ] = true,
+    [ H.Packet.ACTION         ] = true,
+    [ H.Packet.ACTION_MESSAGE ] = true,
+    [ H.Packet.ITEM_DROPPED   ] = true,
+    [ H.Packet.ITEM_OBTAINED  ] = true,
 }
 
 local invokePacketHandler = function()
@@ -118,11 +123,28 @@ end
 -- https://github.com/ocornut/imgui/blob/master/imgui_tables.cpp
 ------------------------------------------------------------------------------------------------------
 local present = function()
-    if not _Globals.Initialized or Ashita.Player.IsZoning() or not Ashita.Player.IsLoggedIn() then
+    if not _Globals.Initialized or Ashita.Player.IsZoning() then
         return nil
     end
 
-    local perfStart = Socket.gettime()
+    local now = Socket.gettime()
+    if not Ashita.Player.IsLoggedIn() then
+        wasLoggedIn = false
+        entityPacketsReady = false
+        return nil
+    end
+
+    if not wasLoggedIn then
+        wasLoggedIn = true
+        renderReadyAt = math.max(renderReadyAt, now + RENDER_GRACE_SECONDS)
+    end
+
+    if now < renderReadyAt then
+        return nil
+    end
+
+    entityPacketsReady = true
+    local perfStart = now
 
     -- Throttling for performance.
     Throttle.Throttle()
@@ -138,7 +160,7 @@ local present = function()
     Timers.Cycle(Timers.Types.AUTOPAUSE)
     Timers.Cycle(Timers.Types.DPS)
 
-    if not WindowManager.ShouldHideFromMenu() and not WindowManager.IsMasked() then
+    if not WindowManager.IsMasked() and not WindowManager.ShouldHideFromMenu() then
         -- Windows that always standalone.
         Hub.Window.Populate(Hub.Content)
         Overview.Window.Populate(Overview.Content)
@@ -186,15 +208,8 @@ ashita.events.register('packet_in', 'packet_in_cb', function(packet)
         return nil
     end
 
-    -- Duplicate packet checking from Thorny by way of the parse addon.
-    -- https://github.com/WinterSolstice8/parse/
-	if not packet.injected and Ashita.Packets.IsDuplicate(packet) then
-        Debug.Error.Add(Debug.Error.WARNING, 'Packet In', string.format('Duplicate packet for packet {%s} found.', tostring(packet.id)))
-        return nil
-    end
-
     local handler = packetHandlers[packet.id]
-    if handler then
+    if handler and (entityPacketsReady or not entityDependentPackets[packet.id]) then
         activePacket = packet
         activePacketHandler = handler
         xpcall(invokePacketHandler, packetError)

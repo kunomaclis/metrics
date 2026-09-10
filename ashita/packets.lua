@@ -1,7 +1,5 @@
 local parser  = require('packets._parser') -- from atom0s
 local breader = require('packets._bitreader') -- from atom0s
-local MAX_PACKET_SIZE = 512
-local MAX_CHUNK_PACKETS = 64
 
 Ashita.Packets = { }
 
@@ -388,46 +386,4 @@ Ashita.Packets.GetActionTarget = function(action)
 	end
 
 	return nil
-end
-
--- ------------------------------------------------------------------------------------------------------
--- Check if the packet is a duplicate.
--- Duplicate packet checking from Thorny by way of the parse addon.
--- https://github.com/WinterSolstice8/parse/
--- ------------------------------------------------------------------------------------------------------
----@param packet table
----@return boolean
--- ------------------------------------------------------------------------------------------------------
-Ashita.Packets.ResetDuplicateBuffers = function()
-    LastChunkBuffer = T{}
-    CurrentChunkBuffer = T{}
-end
-
-Ashita.Packets.IsDuplicate = function(packet)
-    local size = tonumber(packet and packet.size) or 0
-    if size <= 0 or size > MAX_PACKET_SIZE or not packet.data_raw or not packet.chunk_data_raw then
-        return false
-    end
-
-	--Check if new chunk..
-    if (FFI.C.memcmp(packet.data_raw, packet.chunk_data_raw, size) == 0) then
-        LastChunkBuffer = CurrentChunkBuffer
-        CurrentChunkBuffer = T{}
-    end
-
-    --Add packet to current chunk's buffer..
-    local pointer   = FFI.cast('uint8_t*', packet.data_raw)
-    local newPacket = FFI.new('uint8_t[?]', MAX_PACKET_SIZE)
-    FFI.copy(newPacket, pointer, size)
-    CurrentChunkBuffer:append(newPacket)
-    if #CurrentChunkBuffer > MAX_CHUNK_PACKETS then
-        table.remove(CurrentChunkBuffer, 1)
-    end
-
-    --Check if last chunk contained this packet..
-    for _, p in ipairs(LastChunkBuffer) do
-        if (FFI.C.memcmp(p, pointer, size) == 0) then return true end
-    end
-
-    return false
 end

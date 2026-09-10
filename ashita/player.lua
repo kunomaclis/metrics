@@ -12,7 +12,8 @@ Ashita.Player.Buffs =
 ---@return any
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Player.Get = function(attribute)
-    local player = AshitaCore:GetMemoryManager():GetPlayer()
+    local memoryManager = AshitaCore:GetMemoryManager()
+    local player = memoryManager and memoryManager:GetPlayer()
 
     if not player then
         return nil
@@ -53,7 +54,8 @@ Ashita.Player.JobData = function()
     local ANON_JOB   = "NON"
     local ANON_LEVEL = 0
 
-    local player = AshitaCore:GetMemoryManager():GetPlayer()
+    local memoryManager = AshitaCore:GetMemoryManager()
+    local player = memoryManager and memoryManager:GetPlayer()
     if not player then
         return
         {
@@ -132,7 +134,8 @@ end
 ---@return boolean
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Player.HasBuff = function(buffId)
-    local player = AshitaCore:GetMemoryManager():GetPlayer()
+    local memoryManager = AshitaCore:GetMemoryManager()
+    local player = memoryManager and memoryManager:GetPlayer()
     if not player then
         return false
     end
