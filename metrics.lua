@@ -200,7 +200,12 @@ end
 
 local presentFrame = function()
     local ready, perfStart = updateReadiness()
-    if not ready or (renderDisabled and perfStart < renderRetryAt) then
+    if not ready then
+        renderStableSince = nil
+        return nil
+    end
+
+    if renderDisabled and perfStart < renderRetryAt then
         return nil
     end
 

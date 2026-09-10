@@ -45,10 +45,13 @@ Debug.Error.Traceback = function(tag, error)
 
         local file = io.open(path .. "metrics-errors.log", "a")
         if file then
-            file:write(string.format("[%s] %s\n%s\n\n", os.date("%Y-%m-%d %H:%M:%S"), tag, trace))
-            file:flush()
-            file:close()
-            written = true
+            local message = string.format("[%s] %s\n%s\n\n", os.date("%Y-%m-%d %H:%M:%S"), tag, trace)
+            local writeCall, writeResult = pcall(file.write, file, message)
+            local flushCall, flushResult = pcall(file.flush, file)
+            local closeCall, closeResult = pcall(file.close, file)
+            written = writeCall and writeResult ~= nil
+                and flushCall and flushResult ~= nil
+                and closeCall and closeResult ~= nil
         end
     end)
 
