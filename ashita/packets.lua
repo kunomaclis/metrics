@@ -4,7 +4,6 @@ local MAX_PACKET_SIZE = 512
 local MAX_CHUNK_PACKETS = 64
 
 Ashita.Packets = { }
-Ashita.Packets.DuplicateReady = false
 
 -- ------------------------------------------------------------------------------------------------------
 -- Wintersolstice converted the the action packet 0x0028 to the Windower version.
@@ -404,18 +403,9 @@ Ashita.Packets.ResetDuplicateBuffers = function()
     CurrentChunkBuffer = T{}
 end
 
-Ashita.Packets.SetDuplicateReady = function(ready)
-    Ashita.Packets.DuplicateReady = ready == true
-end
-
 Ashita.Packets.IsDuplicate = function(packet)
-    if not Ashita.Packets.DuplicateReady or not packet then
-        return false
-    end
-
-    local size = tonumber(packet.size) or 0
-    -- LuaJIT cdata pointers remain truthy when NULL.
-    if size <= 0 or size > MAX_PACKET_SIZE or packet.data_raw == nil or packet.chunk_data_raw == nil then
+    local size = tonumber(packet and packet.size) or 0
+    if size <= 0 or size > MAX_PACKET_SIZE or not packet.data_raw or not packet.chunk_data_raw then
         return false
     end
 

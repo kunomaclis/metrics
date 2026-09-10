@@ -1,6 +1,5 @@
 Debug.Error = {}
 Debug.Error.Log = {}   -- Error, Count
-Debug.Error.Persisted = {}
 Debug.Error.Count = 0
 Debug.Error.Util = {}
 Debug.Error.WARNING = "Warning"
@@ -32,16 +31,12 @@ end
 
 Debug.Error.Traceback = function(tag, error)
     local trace = debug.traceback(tostring(error), 2)
-    Debug.Error.Add(Debug.Error.ERROR, tag, trace)
+    local isNew = Debug.Error.Add(Debug.Error.ERROR, tag, trace)
 
-    local stack = trace:match("stack traceback:\n(.+)")
-    local firstFrame = stack and stack:match("([^\n]*%.lua:%d+:[^\n]*)") or trace
-    local persistKey = tostring(tag) .. "|" .. firstFrame
-    if Debug.Error.Persisted[persistKey] then
-        return trace, false, true
+    if not isNew then
+        return trace
     end
 
-    local written = false
     pcall(function()
         local path = File.Path()
         File.FileExists(path)
@@ -51,15 +46,10 @@ Debug.Error.Traceback = function(tag, error)
             file:write(string.format("[%s] %s\n%s\n\n", os.date("%Y-%m-%d %H:%M:%S"), tag, trace))
             file:flush()
             file:close()
-            written = true
         end
     end)
 
-    if written then
-        Debug.Error.Persisted[persistKey] = true
-    end
-
-    return trace, written, false
+    return trace
 end
 
 ------------------------------------------------------------------------------------------------------

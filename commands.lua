@@ -36,15 +36,6 @@ ashita.events.register('command', 'command_cb', function (e)
         elseif argument == "debug" then
             Debug.Toggle()
 
-        elseif argument == "logtest" then
-            local _, written, existing = Debug.Error.Traceback("selftest", "deliberate test error")
-            local status = written and "Wrote " or existing and "Already recorded " or "Failed to write "
-            Ashita.Chat.Echo(status .. File.Path() .. "metrics-errors.log")
-
-        elseif argument == "recover" then
-            Debug.Recover()
-            Ashita.Chat.Echo("Metrics rendering re-enabled.")
-
         elseif argument == "nano" or argument == "n" then
             Parse.Config.EnableNanoMode()
 
