@@ -66,11 +66,14 @@ require('horizon')
 require('initialization')
 
 local RENDER_GRACE_SECONDS = 3
+local RENDER_RECOVERY_SECONDS = 10
 local RENDER_RETRY_DELAYS = { 3, 15, 60 }
 local renderDisabled = false
 local renderRetryAt = 0
 local renderFailureCount = 0
 local renderFailureNotified = false
+local renderStableSince
+local renderErrorPersisted = false
 local renderReadyAt = 0
 local wasLoggedIn = false
 local entityPacketsReady = false
@@ -190,7 +193,9 @@ local present = function(perfStart)
 end
 
 local presentError = function(error)
-    return Debug.Error.Traceback("d3d_present", error)
+    local trace, written, existing = Debug.Error.Traceback("d3d_present", error)
+    renderErrorPersisted = written or existing
+    return trace
 end
 
 local presentFrame = function()
@@ -199,13 +204,18 @@ local presentFrame = function()
         return nil
     end
 
-    local retrying = renderDisabled
     renderDisabled = false
     present(perfStart)
 
-    if retrying then
+    if renderFailureCount > 0 and not renderStableSince then
+        renderStableSince = perfStart
+    end
+
+    if renderStableSince and perfStart - renderStableSince >= RENDER_RECOVERY_SECONDS then
         renderFailureCount = 0
         renderFailureNotified = false
+        renderStableSince = nil
+        renderErrorPersisted = false
         pcall(Ashita.Chat.Echo, "UI rendering recovered.")
     end
 end
@@ -214,6 +224,7 @@ ashita.events.register('d3d_present', 'present_cb', function()
     local success = xpcall(presentFrame, presentError)
     if not success then
         renderDisabled = true
+        renderStableSince = nil
         renderFailureCount = renderFailureCount + 1
 
         local retryIndex = math.min(renderFailureCount, #RENDER_RETRY_DELAYS)
@@ -221,7 +232,13 @@ ashita.events.register('d3d_present', 'present_cb', function()
 
         if not renderFailureNotified then
             renderFailureNotified = true
-            pcall(Ashita.Chat.Echo, "UI rendering paused after an error; combat tracking continues. Retrying automatically. See config\\Metrics\\metrics-errors.log.")
+            local message = "UI rendering paused after an error; combat tracking continues. Retrying automatically."
+            if renderErrorPersisted then
+                message = message .. " See config\\Metrics\\metrics-errors.log."
+            else
+                message = message .. " The error log could not be written."
+            end
+            pcall(Ashita.Chat.Echo, message)
         end
     end
 end)
