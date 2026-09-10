@@ -83,12 +83,14 @@ local packetHandlers =
     [ H.Packet.ZONE_START      ] = function()
         if not Ashita.Player.IsZoning() then
             Ashita.Player.Zoning(true)
+            Ashita.Packets.SetDuplicateReady(false)
             Ashita.Packets.ResetDuplicateBuffers()
         end
     end,
     [ H.Packet.ZONE_END        ] = function()
         H.ZoningEnd()
         Ashita.Packets.ResetDuplicateBuffers()
+        Ashita.Packets.SetDuplicateReady(true)
     end,
     [ H.Packet.EXAMPLAR_UPDATE ] = function(packet) XP.OnExemplarUpdate(packet.data) end,
     [ H.Packet.CAPACITY_UPDATE ] = function(packet) XP.OnCapacityUpdate(packet.data) end,
@@ -109,6 +111,10 @@ end
 local packetError = function(error)
     local packetId = activePacket and activePacket.id or "unknown"
     return Debug.Error.Traceback(string.format("packet_in 0x%03X", tonumber(packetId) or 0), error)
+end
+
+Debug.Recover = function()
+    renderDisabled = false
 end
 
 ------------------------------------------------------------------------------------------------------
@@ -188,7 +194,8 @@ ashita.events.register('packet_in', 'packet_in_cb', function(packet)
 
     -- Duplicate packet checking from Thorny by way of the parse addon.
     -- https://github.com/WinterSolstice8/parse/
-	if not packet.injected and Ashita.Packets.IsDuplicate(packet) then
+    local isZonePacket = packet.id == H.Packet.ZONE_START or packet.id == H.Packet.ZONE_END
+	if not packet.injected and not isZonePacket and Ashita.Packets.IsDuplicate(packet) then
         Debug.Error.Add(Debug.Error.WARNING, 'Packet In', string.format('Duplicate packet for packet {%s} found.', tostring(packet.id)))
         return nil
     end
