@@ -125,7 +125,7 @@ Ashita.Mob.Data = function(id, convertId)
     entity.name = entityManager:GetName(index)
     if not entity.name or entity.name == "" then
         Debug.Error.Add(Debug.Error.ERROR, "Ashita.Mob.Data", "Encountered a blank mob name.")
-        entity.name = DB.Enum.DEBUG
+        return nil
     end
 
     local serverId      = entityManager:GetServerId(index)
