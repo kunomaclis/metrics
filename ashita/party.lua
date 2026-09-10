@@ -120,10 +120,8 @@ Ashita.Party.Refresh = function(playerName, node)
 
         if data:GetMemberIsActive(slot) == 1 then
             local name      = data:GetMemberName(slot)
-            local id        = data:GetMemberServerId(slot)
-            local memberMob = Ashita.Mob.GetMobByID(id)
 
-            if memberMob and name ~= "" then
+            if name and name ~= "" then
                 Ashita.Party.List[name] = partyNumber
                 DB.Data.InitializePlayerTrackingTables(name)
 
