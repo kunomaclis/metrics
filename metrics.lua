@@ -66,7 +66,11 @@ require('horizon')
 require('initialization')
 
 local RENDER_GRACE_SECONDS = 3
+local RENDER_RETRY_DELAYS = { 3, 15, 60 }
 local renderDisabled = false
+local renderRetryAt = 0
+local renderFailureCount = 0
+local renderFailureNotified = false
 local renderReadyAt = 0
 local wasLoggedIn = false
 local entityPacketsReady = false
@@ -191,17 +195,34 @@ end
 
 local presentFrame = function()
     local ready, perfStart = updateReadiness()
-    if renderDisabled or not ready then
+    if not ready or (renderDisabled and perfStart < renderRetryAt) then
         return nil
     end
 
+    local retrying = renderDisabled
+    renderDisabled = false
     present(perfStart)
+
+    if retrying then
+        renderFailureCount = 0
+        renderFailureNotified = false
+        pcall(Ashita.Chat.Echo, "UI rendering recovered.")
+    end
 end
 
 ashita.events.register('d3d_present', 'present_cb', function()
     local success = xpcall(presentFrame, presentError)
     if not success then
         renderDisabled = true
+        renderFailureCount = renderFailureCount + 1
+
+        local retryIndex = math.min(renderFailureCount, #RENDER_RETRY_DELAYS)
+        renderRetryAt = Socket.gettime() + RENDER_RETRY_DELAYS[retryIndex]
+
+        if not renderFailureNotified then
+            renderFailureNotified = true
+            pcall(Ashita.Chat.Echo, "UI rendering paused after an error; combat tracking continues. Retrying automatically. See config\\Metrics\\metrics-errors.log.")
+        end
     end
 end)
 
