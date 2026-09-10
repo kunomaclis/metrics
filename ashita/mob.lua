@@ -1,5 +1,28 @@
 Ashita.Mob = { }
 
+local MIN_ENTITY_INDEX = 1
+local MAX_ENTITY_INDEX = 2303
+
+Ashita.Mob.IsValidIndex = function(index)
+    index = tonumber(index)
+    return index ~= nil and index >= MIN_ENTITY_INDEX and index <= MAX_ENTITY_INDEX and index == math.floor(index)
+end
+
+local convertRotation = function(rawRotation)
+    if not rawRotation then
+        return 0
+    end
+
+    local degrees = (rawRotation / 3) * 180
+    degrees = degrees % 360
+
+    if degrees < 0 then
+        degrees = degrees + 360
+    end
+
+    return degrees
+end
+
 -- ------------------------------------------------------------------------------------------------------
 -- Get an index from a mob ID. I got this from WinterSolstice8's parse lua.
 -- Parse: https://github.com/WinterSolstice8/parse
@@ -8,14 +31,25 @@ Ashita.Mob = { }
 ---@return integer
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Mob.GetIndexByID = function(id)
-    if not id then
-        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Mob.GetIndexByID", "Parameter \"id\" was nil.")
+    id = tonumber(id)
+    if not id or id <= 0 then
+        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Mob.GetIndexByID", "Parameter \"id\" was invalid.")
+        return 0
+    end
+
+    if Ashita.Player and Ashita.Player.IsZoning and Ashita.Player.IsZoning() then
+        return 0
     end
 
     local index = bit.band(id, 0x7FF)
-    local entityManager = AshitaCore:GetMemoryManager():GetEntity()
+    local memoryManager = AshitaCore:GetMemoryManager()
+    local entityManager = memoryManager and memoryManager:GetEntity()
 
-    if entityManager and entityManager:GetServerId(index) == id then
+    if not entityManager then
+        return 0
+    end
+
+    if Ashita.Mob.IsValidIndex(index) and entityManager:GetServerId(index) == id then
         return index
     end
 
@@ -37,6 +71,7 @@ end
 Ashita.Mob.GetMobByID = function(id)
     if not id then
         Debug.Error.Add(Debug.Error.ERROR, "Ashita.Mob.GetMobByID", "Parameter \"id\" was nil.")
+        return nil
     end
 
     return Ashita.Mob.Data(id, true)
@@ -49,11 +84,12 @@ end
 ---@return table
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Mob.GetMobByIndex = function(index)
-    if not index then
-        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Mob.GetMobByIndex", "Parameter \"index\" was nil.")
+    if not Ashita.Mob.IsValidIndex(index) then
+        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Mob.GetMobByIndex", "Parameter \"index\" was invalid.")
+        return nil
     end
 
-    return Ashita.Mob.Data(index)
+    return Ashita.Mob.Data(tonumber(index))
 end
 
 -- ------------------------------------------------------------------------------------------------------
@@ -75,30 +111,21 @@ Ashita.Mob.Data = function(id, convertId)
         return unitTestingMob
     end
 
-    local index = convertId and Ashita.Mob.GetIndexByID(id) or id
-	local entityManager = AshitaCore:GetMemoryManager():GetEntity()
+    local index = tonumber(convertId and Ashita.Mob.GetIndexByID(id) or id)
+    local memoryManager = AshitaCore:GetMemoryManager()
+	local entityManager = memoryManager and memoryManager:GetEntity()
+
+    if not Ashita.Mob.IsValidIndex(index) or not entityManager then
+        return nil
+    end
+
     local entity = { }
 
     -- Sometimes players and pets can have blank names.
     entity.name = entityManager:GetName(index)
-    if entity.name == "" then
-        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Mob.Data", string.format("Encountered a blank mob name. ID {%d}.", id or 0))
+    if not entity.name or entity.name == "" then
+        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Mob.Data", "Encountered a blank mob name.")
         entity.name = DB.Enum.DEBUG
-    end
-
-    local convertRotation = function(rawRotation)
-        if not rawRotation then
-            return 0
-        end
-
-        local degrees = (rawRotation / 3) * 180
-        degrees = degrees % 360
-
-        if degrees < 0 then
-            degrees = degrees + 360
-        end
-
-        return degrees
     end
 
     local serverId      = entityManager:GetServerId(index)
@@ -179,7 +206,7 @@ end
 Ashita.Mob.GetMobByTarget = function(target)
     local player = Ashita.Player.Entity()
     if not player then
-        return { }
+        return nil
     end
 
     local playerId = player.ServerId
@@ -200,7 +227,7 @@ Ashita.Mob.GetMobByTarget = function(target)
         -- return a.Data.Mob_By_ID(pet_id)
     end
 
-    return { }
+    return nil
 end
 
 -- ------------------------------------------------------------------------------------------------------

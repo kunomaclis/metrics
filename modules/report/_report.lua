@@ -46,6 +46,7 @@ end
 Report.Section.ChatReports = function()
     local colFlags = Column.Flags.None
     local width    = Column.Widths.Report
+    local publish
 
     UI.Text('Chat Reports')
     Report.Widgets.ChatMode()
@@ -56,24 +57,29 @@ Report.Section.ChatReports = function()
         UI.TableSetupColumn('Col 3', colFlags, width)
         UI.TableSetupColumn('Col 4', colFlags, width)
 
-        -- The early returns are necessary for crash prevention.
         UI.TableNextRow()
-        UI.TableNextColumn() if UI.Button('Overall     ') then Report.Publishing.Overall() return end
+        UI.TableNextColumn() if UI.Button('Overall     ') then publish = true end
         UI.TableNextColumn()
         UI.TableNextColumn()
         UI.TableNextColumn()
         --
-        UI.TableNextColumn() if UI.Button('Melee       ') then Report.Publishing.DamageByType(DB.Trackable.MELEE_OVERALL) return end
-        UI.TableNextColumn() if UI.Button('Weaponskills') then Report.Publishing.DamageByType(DB.Trackable.WEAPONSKILL) return end
-        UI.TableNextColumn() if UI.Button('Magic       ') then Report.Publishing.DamageByType(DB.Trackable.SPELLS_OVERALL) return end
-        UI.TableNextColumn() if UI.Button('Pet         ') then Report.Publishing.DamageByType(DB.Trackable.PET_OVERALL) return end
+        UI.TableNextColumn() if UI.Button('Melee       ') then publish = DB.Trackable.MELEE_OVERALL end
+        UI.TableNextColumn() if UI.Button('Weaponskills') then publish = DB.Trackable.WEAPONSKILL end
+        UI.TableNextColumn() if UI.Button('Magic       ') then publish = DB.Trackable.SPELLS_OVERALL end
+        UI.TableNextColumn() if UI.Button('Pet         ') then publish = DB.Trackable.PET_OVERALL end
         --
-        UI.TableNextColumn() if UI.Button('Abilities   ') then Report.Publishing.DamageByType(DB.Trackable.ABILITY_DAMAGING) return end
-        UI.TableNextColumn() if UI.Button('Healing     ') then Report.Publishing.DamageByType(DB.Trackable.ALL_HEAL) return end
+        UI.TableNextColumn() if UI.Button('Abilities   ') then publish = DB.Trackable.ABILITY_DAMAGING end
+        UI.TableNextColumn() if UI.Button('Healing     ') then publish = DB.Trackable.ALL_HEAL end
         UI.TableNextColumn()
         UI.TableNextColumn()
 
         UI.EndTable()
+    end
+
+    if publish == true then
+        Report.Publishing.Overall()
+    elseif publish then
+        Report.Publishing.DamageByType(publish)
     end
 end
 
@@ -83,6 +89,7 @@ end
 Report.Section.Export = function()
     local colFlags = Column.Flags.None
     local width    = Column.Widths.Report
+    local saveAction
     UI.Text('Export Data')
     UI.Text('Files can be found in: /config/Metrics/')
 
@@ -101,23 +108,24 @@ Report.Section.Export = function()
         UI.TableNextRow()
         UI.TableNextColumn()
         if UI.Button('Database    ') then
-            File.SaveData()
-            return
+            saveAction = File.SaveData
         end
 
         UI.TableNextColumn()
         if UI.Button('Battle Log  ') then
-            File.SaveBattlelog()
-            return
+            saveAction = File.SaveBattlelog
         end
 
         UI.TableNextColumn()
         if UI.Button('Loot        ') then
-            File.SaveLoot()
-            return
+            saveAction = File.SaveLoot
         end
 
         UI.EndTable()
+    end
+
+    if saveAction then
+        saveAction()
     end
 end
 

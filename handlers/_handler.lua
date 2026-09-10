@@ -220,9 +220,15 @@ H.ActionMessage = function(packet)
     -- Killing a mob.
     if data.message == Ashita.Message.MOB_KILL then
         local actorMob = Ashita.Mob.GetMobByIndex(data.actor_index)
+        if not actorMob then
+            return nil
+        end
 
         if Ashita.Party.IsAffiliate(actorMob.name) or Ashita.Mob.PetOwner(actorMob) then
             local targetMob = Ashita.Mob.GetMobByIndex(data.target_index)
+            if not targetMob then
+                return nil
+            end
 
             DB.TallyDefeatedMob(targetMob.name)
             Blog.Add(targetMob.name, nil, Blog.ActionType.MOB_DEATH, Blog.Enum.MOB_DEATH, nil, "------------")
@@ -230,8 +236,15 @@ H.ActionMessage = function(packet)
 
     -- Mob falls to the ground without a killing blow.
     elseif data.message == Ashita.Message.DEATH_FALL then
-        local actorMob   = Ashita.Mob.GetMobByIndex(data.actor_index)
+        local actorMob = Ashita.Mob.GetMobByIndex(data.actor_index)
+        if not actorMob then
+            return nil
+        end
+
         local claimerMob = Ashita.Mob.GetMobByID(actorMob.claim_id)
+        if not claimerMob then
+            return nil
+        end
 
         if Ashita.Party.IsAffiliate(claimerMob.name) or Ashita.Mob.PetOwner(claimerMob) then
             DB.TallyDefeatedMob(actorMob.name)
@@ -239,17 +252,25 @@ H.ActionMessage = function(packet)
         end
 
     -- Being defeated by a mob.
-    elseif data.message == Ashita.Message.DEATH_FALL or data.message == Ashita.Message.DEATH then
+    elseif data.message == Ashita.Message.DEATH then
         local targetMob = Ashita.Mob.GetMobByIndex(data.target_index)
+        if not targetMob then
+            return nil
+        end
 
         if Ashita.Party.IsAffiliate(targetMob.name) then
             local actorMob = Ashita.Mob.GetMobByIndex(data.actor_index)
-            H.Death.Action(actorMob, targetMob)
+            if actorMob then
+                H.Death.Action(actorMob, targetMob)
+            end
         end
 
     -- Gil obtained from kill.
     elseif data.message == Ashita.Message.GIL_ACTOR or data.message == Ashita.Message.GIL_TARGET or data.message == Ashita.Message.GIL_MUG then
         local actorMob = Ashita.Mob.GetMobByIndex(data.target_index)
+        if not actorMob then
+            return nil
+        end
 
         if Ashita.Party.IsAffiliate(actorMob.name) or Ashita.Mob.PetOwner(actorMob) then
             Loot.NonDrop(actorMob.name, "Gil", data.param1)

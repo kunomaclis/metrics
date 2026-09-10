@@ -13,7 +13,8 @@ Ashita.Party.RefreshTime      = os.time()
 ---@return table
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Party.Get = function()
-    local data = AshitaCore:GetMemoryManager():GetParty()
+    local memoryManager = AshitaCore:GetMemoryManager()
+    local data = memoryManager and memoryManager:GetParty()
     if not data then
         return { }
     end
@@ -106,7 +107,8 @@ Ashita.Party.Refresh = function(playerName, node)
         return nil
     end
 
-    local data = AshitaCore:GetMemoryManager():GetParty()
+    local memoryManager = AshitaCore:GetMemoryManager()
+    local data = memoryManager and memoryManager:GetParty()
     if not data then
         return nil
     end
@@ -119,11 +121,9 @@ Ashita.Party.Refresh = function(playerName, node)
         local partyNumber = math.ceil((slot + 1) / 6)
 
         if data:GetMemberIsActive(slot) == 1 then
-            local name      = data:GetMemberName(slot)
-            local id        = data:GetMemberServerId(slot)
-            local memberMob = Ashita.Mob.GetMobByID(id)
+            local name = data:GetMemberName(slot)
 
-            if memberMob and name ~= "" then
+            if name and name ~= "" then
                 Ashita.Party.List[name] = partyNumber
                 DB.Data.InitializePlayerTrackingTables(name)
 

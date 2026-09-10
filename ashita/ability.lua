@@ -24,10 +24,12 @@ Ashita.Ability = { }
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Ability.GetByID = function(id)
     if not id then
-        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Abiliity.GetByID", string.format("Parameter \"id\" was nil."))
+        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Ability.GetByID", "Parameter \"id\" was nil.")
+        return nil
     end
 
-    local abilityData = AshitaCore:GetResourceManager():GetAbilityById(id)
+    local resourceManager = AshitaCore:GetResourceManager()
+    local abilityData = resourceManager and resourceManager:GetAbilityById(id)
 
     if not abilityData then
         Debug.Error.Add(Debug.Error.ERROR, "Ashita.Ability.GetByID", string.format("No ability data: ID {%d}.", id or 0))
@@ -69,15 +71,20 @@ end
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Ability.RecastID = function(id)
     if not id then
-        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Ability.RecastID", string.format("Parameter \"id\" was nil."))
+        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Ability.RecastID", "Parameter \"id\" was nil.")
+        return 0
     end
 
     local memoryManager = AshitaCore:GetMemoryManager()
+    local recast = memoryManager and memoryManager:GetRecast()
+    if not recast then
+        return 0
+    end
 
     for i = 0, 31 do
-        local abilityId = memoryManager:GetRecast():GetAbilityTimerId(i)
+        local abilityId = recast:GetAbilityTimerId(i)
         if abilityId == id then
-            return math.floor(memoryManager:GetRecast():GetAbilityTimer(i) / 60)
+            return math.floor(recast:GetAbilityTimer(i) / 60)
         end
     end
 

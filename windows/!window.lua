@@ -56,24 +56,32 @@ function Window:New(initSettings)
         self.CheckPosition()
         self.SetScaling()
 
-        if UI.Begin(title, isVisible, flags) then
+        local contentSuccess = true
+        local contentError
+        local shouldDraw = UI.Begin(title, isVisible, flags)
+
+        if shouldDraw then
             self.UpdateSettings()
             self.SetLegacyScaling()
 
             WindowManager.SetThemeElements()
 
             if content and type(content) == 'function' then
-                content()
+                contentSuccess, contentError = xpcall(content, debug.traceback)
             end
 
+            WindowManager.PopThemeElements()
             self.SetLegacyScaling(globalScaling)
-            UI.End()
         end
 
-        WindowManager.PopThemeElements()
+        UI.End()
         self.SetScaling(globalScaling)
 
         UI.PopStyleVar(5)
+
+        if not contentSuccess then
+            error(contentError, 0)
+        end
     end
 
     ------------------------------------------------------------------------------------------------------

@@ -110,12 +110,19 @@ menuHandler.GetMenuName = function()
 
     local pointerValue = ashita.memory.read_uint32(pointer)
 
-    if pointerValue == 0 then
+    if not pointerValue or pointerValue == 0 then
         return '', 0
     end
 
     local menuHeader = ashita.memory.read_uint32(pointerValue + 4)
+    if not menuHeader or menuHeader == 0 then
+        return '', 0
+    end
+
     local menuName   = ashita.memory.read_string(menuHeader + 0x46, 16)
+    if not menuName then
+        return '', 0
+    end
 
     return string.gsub(menuName, '\x00', '')
 end

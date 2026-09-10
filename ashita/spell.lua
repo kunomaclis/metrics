@@ -9,10 +9,12 @@ Ashita.Spell = { }
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Spell.GetByID = function(id)
     if not id then
-        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Spell.GetByID", string.format("Parameter \"id\" was nil."))
+        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Spell.GetByID", "Parameter \"id\" was nil.")
+        return nil
     end
 
-    return AshitaCore:GetResourceManager():GetSpellById(id)
+    local resourceManager = AshitaCore:GetResourceManager()
+    return resourceManager and resourceManager:GetSpellById(id) or nil
 end
 
 -- ------------------------------------------------------------------------------------------------------
@@ -48,7 +50,8 @@ end
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Spell.MP = function(id, data)
     if not id then
-        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Spell.MP", string.format("Parameter \"id\" was nil."))
+        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Spell.MP", "Parameter \"id\" was nil.")
+        return 0
     end
 
     local spell = data or Ashita.Spell.GetByID(id)
@@ -70,7 +73,8 @@ end
 -- ------------------------------------------------------------------------------------------------------
 Ashita.Spell.Skill = function(id, data)
     if not id then
-        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Spell.Skill", string.format("Parameter \"id\" was nil."))
+        Debug.Error.Add(Debug.Error.ERROR, "Ashita.Spell.Skill", "Parameter \"id\" was nil.")
+        return 0
     end
 
     local spell = data or Ashita.Spell.GetByID(id)
